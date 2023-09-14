@@ -1,0 +1,41 @@
+version: "2"
+services:
+    db:
+        image: mysql
+        volumes:
+            - ./data/mysql/:/var/lib/mysql
+            - ./scripts/0.grant_privileges.sql:/docker-entrypoint-initdb.d/0.grant_privileges.sql
+            - ./scripts/1.canal_manager.sql:/docker-entrypoint-initdb.d/1.canal_manager.sql
+        environment:
+            - MYSQL_ALLOW_EMPTY_PASSWORD=true
+
+    canal-admin:
+        image: canal/canal-admin
+        depends_on:
+            - db
+        links:
+            - db
+        ports:
+            - 8089:8089
+        env_file:
+            - ./env/canal-admin.env
+        volumes:
+          - ./log/canal-admin/:/home/admin/canal-admin/logs
+        # mem_limit: 1024m
+
+    canal-server:
+        image: canal/canal-server
+        depends_on:
+            - canal-admin
+        links:
+            - canal-admin
+        ports:
+            - 11110:11110
+            - 11111:11111
+            - 11112:11112
+            - 9100:9100
+        env_file:
+            - ./env/canal-server.env
+        volumes:
+            - ./log/canal-server/:/home/admin/canal-server/logs
+        mem_limit: 4096m
